@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-#package 01_package
+#package 02_package
 use Test::More tests => 11;
 use strict;
 
@@ -25,7 +25,7 @@ ok (! alias->as);
 
 my $original = __PACKAGE__;
 my $alias = "MyPackage";
-package::use($original, $alias);
+package::alias($alias, $original);
 
 ok $alias->mysub;
 ok ! $alias->as;

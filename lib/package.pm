@@ -2,7 +2,7 @@ package package;
 use strict;
 use warnings;
 
-our $VERSION = '0.0002';
+our $VERSION = '0.0005';
 
 #printf "*** %s VERSION: %s\n", __PACKAGE__, $VERSION;
 
@@ -15,13 +15,14 @@ my $import = q|
 sub import {
 	shift;
 	return unless @_;
+	my $alias    = shift;
 	my $original = caller;
-	package::use( $original, @_ );
+	package::alias( $alias, $original, @_ );
 }
 
-sub use {
-	my $original = shift;
+sub alias {
 	my $alias    = shift;
+	my $original = shift;
 
 	my $expression = sprintf $import, $alias, $original, $original, $original;
 
@@ -32,7 +33,7 @@ sub use {
 		printf "%s\n", $expression;
 		warn $@;
 	}
-	
+
 }
 
 =head1 NAME
@@ -43,27 +44,20 @@ package - makes an alias of the current package
 
 	package ThisPAckage;
 	
-	sub mysub { 1 };
-	sub as { 0 };
+	sub new { }
 	
-	use package "asNewName", qw'mysub as';
+	use package "Alias", qw'new';
 	
-	&asNewName::mysub;
-	&asNewName::as;
+	&Alias::new;
 	
 	or
 	
 	package main;
 	
-	my $original = __PACKAGE__;
-	my $alias = "MyPackage";
-	package::use($original, $alias);
+	package::alias('Alias', 'Original');
 	
-	$alias->mysub;
-	$alias->as;
-	
-	MyPackage->mysub;
-	MyPackage->as;
+	my $alias = new Alias();
+	$alias->sub_from_original;
 
 =head1 DESCRIPTION
 
@@ -72,12 +66,14 @@ and establishs IS-A relationship with current package and alias at compile time
 
 =head1 METHODS
 
-=head2 use($original, $alias, @import)
+=head2 alias($alias, $original, @import)
 
 use package makes as alias of the original
 and imports the symbols in import in the namespace of alias
 
-	package::use($original, $alias, qw'importnames basename dirname');
+currently imports only function names
+
+	package::alias($alias, $original, qw'importnames basename dirname');
 
 =head1 AUTHOR
 
