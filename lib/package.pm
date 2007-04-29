@@ -2,15 +2,12 @@ package package;
 use strict;
 use warnings;
 
-our $VERSION = '0.0005';
+our $VERSION = '0.0019';
 
+use Carp 'carp';
 #printf "*** %s VERSION: %s\n", __PACKAGE__, $VERSION;
 
-my $import = q|
-	package %s;
-	use base "%s";
-	*VERSION = \$%s::VERSION if defined $%s::VERSION;
-|;
+#	*VERSION = \$%s::VERSION if defined $%s::VERSION;
 
 sub import {
 	shift;
@@ -24,14 +21,28 @@ sub alias {
 	my $alias    = shift;
 	my $original = shift;
 
-	my $expression = sprintf $import, $alias, $original, $original, $original;
+	my $expression;
 
-	$expression .= "\t*$_ = \\&${original}::$_;\n" foreach @_;
+	$expression .= "package $alias;\n";
+	$expression .= "use base '$original';\n";
+
+	if (@_) {
+		$expression .= "use strict;\n";
+		$expression .= "use warnings;\n";
+		foreach (@_) {
+			if (/^([\$\@%&*])(.*)/) {
+				$expression .= "\t*$2 = \\$1${original}::$2;\n";
+			} else {
+				$expression .= "\t*$_ = \\&${original}::$_;\n";
+			}
+		}
+	}
 
 	eval $expression;
 	if ($@) {
-		printf "%s\n", $expression;
-		warn $@;
+		#printf "%s\n", $expression;
+		#carp $@;
+		carp "Syntax error";
 	}
 
 }
@@ -71,9 +82,7 @@ and establishs IS-A relationship with current package and alias at compile time
 use package makes as alias of the original
 and imports the symbols in import in the namespace of alias
 
-currently imports only function names
-
-	package::alias($alias, $original, qw'importnames basename dirname');
+	package::alias($alias, $original, qw'$var $foo basename');
 
 =head1 AUTHOR
 
