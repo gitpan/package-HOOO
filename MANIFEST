@@ -5,4 +5,5 @@ t/00pod.t
 t/01_package.t
 t/02_package.t
 t/03_package.t
+t/04_package.t
 META.yml                                 Module meta-data (added by MakeMaker)

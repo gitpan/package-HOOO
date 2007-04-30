@@ -2,7 +2,7 @@ package package;
 use strict;
 use warnings;
 
-our $VERSION = '0.0019';
+our $VERSION = '0.0031';
 
 use Carp 'carp';
 #printf "*** %s VERSION: %s\n", __PACKAGE__, $VERSION;
@@ -17,6 +17,9 @@ sub import {
 	package::alias( $alias, $original, @_ );
 }
 
+our $_space = qr/\s+/so;
+our $_type  = qr/^([\$\@%&*]?)(.*)/so;
+
 sub alias {
 	my $alias    = shift;
 	my $original = shift;
@@ -29,12 +32,38 @@ sub alias {
 	if (@_) {
 		$expression .= "use strict;\n";
 		$expression .= "use warnings;\n";
-		foreach (@_) {
-			if (/^([\$\@%&*])(.*)/) {
-				$expression .= "\t*$2 = \\$1${original}::$2;\n";
-			} else {
-				$expression .= "\t*$_ = \\&${original}::$_;\n";
+
+		if (@_) {
+			foreach (@_) {
+
+				if ( 'HASH' eq ref $_ ) {
+
+					while ( my ( $a, $o ) = each %$_ ) {
+						if ( $a =~ m.$_type.gc && $1 ) {
+							my $t = $1;
+							$a = $2;
+							if ( $o =~ m.$_type.gc ) {
+								$t = $1 if $1;
+								$expression .= atpo( $a, $t, $original, $2 );
+							} else {
+								carp "Syntax error";
+							}
+						} else {
+							$expression .= atpo( $a, '&', $original, $o );
+						}
+					}
+
+				} else {
+					foreach ( split /$_space/, $_ ) {
+						if ( m.$_type.gc && $1 ) {
+							$expression .= atpo( $2, $1, $original, $2 );
+						} else {
+							$expression .= atpo( $_, '&', $original, $_ );
+						}
+					}
+				}
 			}
+
 		}
 	}
 
@@ -47,6 +76,8 @@ sub alias {
 
 }
 
+sub atpo { sprintf "\t*%s = \\%s%s::%s;\n", @_ }
+
 =head1 NAME
 
 package - makes an alias of the current package
@@ -57,9 +88,10 @@ package - makes an alias of the current package
 	
 	sub new { }
 	
-	use package "Alias", qw'new';
+	use package "Alias", qw'new', { alias => 'new' };
 	
-	&Alias::new;
+	my $ref = &Alias::new;
+	my $obj = Alias->alias;
 	
 	or
 	
@@ -83,6 +115,7 @@ use package makes as alias of the original
 and imports the symbols in import in the namespace of alias
 
 	package::alias($alias, $original, qw'$var $foo basename');
+	package::alias($alias, $original, {'@as => '@it', '@like => '@it'}, qw'sub routine');
 
 =head1 AUTHOR
 
