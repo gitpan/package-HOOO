@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-#package 03_package
+#package 02_package
 use Test::More tests => 1;
 use strict;
 

@@ -22,7 +22,7 @@ sub sub_from_original { }
 
 package main;
 
-package::alias( 'Alias', 'Original', qw'$Var &new @Ar %Hash' );
+package::alias( 'Alias', 'Original', [qw'$Var &new'], qw'@Ar %Hash' );
 
 my $alias = new Alias();
 $alias->sub_from_original;

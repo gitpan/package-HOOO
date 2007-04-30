@@ -2,9 +2,9 @@ package package;
 use strict;
 use warnings;
 
-our $VERSION = '0.0031';
+our $VERSION = '0.0035';
 
-use Carp 'carp';
+use Carp 'croak';
 #printf "*** %s VERSION: %s\n", __PACKAGE__, $VERSION;
 
 #	*VERSION = \$%s::VERSION if defined $%s::VERSION;
@@ -26,6 +26,22 @@ sub alias {
 
 	my $expression;
 
+	eval package::expression( $alias, $original, @_ );
+
+	if ($@) {
+		#printf "%s\n", $expression;
+		#carp $@;
+		croak "Syntax error";
+	}
+
+}
+
+sub expression {
+	my $alias    = shift;
+	my $original = shift;
+
+	my $expression;
+
 	$expression .= "package $alias;\n";
 	$expression .= "use base '$original';\n";
 
@@ -33,50 +49,59 @@ sub alias {
 		$expression .= "use strict;\n";
 		$expression .= "use warnings;\n";
 
-		if (@_) {
-			foreach (@_) {
+		$expression .= package::statements( $alias, $original, @_ );
+	}
 
-				if ( 'HASH' eq ref $_ ) {
+	return $expression;
+}
 
-					while ( my ( $a, $o ) = each %$_ ) {
-						if ( $a =~ m.$_type.gc && $1 ) {
-							my $t = $1;
-							$a = $2;
-							if ( $o =~ m.$_type.gc ) {
-								$t = $1 if $1;
-								$expression .= atpo( $a, $t, $original, $2 );
-							} else {
-								carp "Syntax error";
-							}
-						} else {
-							$expression .= atpo( $a, '&', $original, $o );
-						}
+sub statements {
+	my $alias    = shift;
+	my $original = shift;
+
+	my $expression;
+
+	return '' unless @_;
+
+	foreach (@_) {
+
+		if ( 'ARRAY' eq ref $_ ) {
+
+			$expression .= package::statements( $alias, $original, @$_ );
+
+		} elsif ( 'HASH' eq ref $_ ) {
+			while ( my ( $a, $o ) = each %$_ ) {
+				if ( $a =~ m.$_type.gc && $1 ) {
+					my $t = $1;
+					$a = $2;
+					if ( $o =~ m.$_type.gc ) {
+						$t = $1 if $1;
+						$expression .= atpo( $a, $t, $original, $2 );
+					} else {
+						croak "Syntax error";
 					}
-
 				} else {
-					foreach ( split /$_space/, $_ ) {
-						if ( m.$_type.gc && $1 ) {
-							$expression .= atpo( $2, $1, $original, $2 );
-						} else {
-							$expression .= atpo( $_, '&', $original, $_ );
-						}
-					}
+					$expression .= atpo( $a, '&', $original, $o );
 				}
 			}
-
+		} else {
+			foreach ( split /$_space/, $_ ) {
+				if ( m.$_type.gc && $1 ) {
+					$expression .= atpo( $2, $1, $original, $2 );
+				} else {
+					$expression .= atpo( $_, '&', $original, $_ );
+				}
+			}
 		}
 	}
 
-	eval $expression;
-	if ($@) {
-		#printf "%s\n", $expression;
-		#carp $@;
-		carp "Syntax error";
-	}
-
+	return $expression;
 }
 
-sub atpo { sprintf "\t*%s = \\%s%s::%s;\n", @_ }
+sub atpo {
+	my ( $alias, $type, $package, $original ) = @_;
+	return sprintf "\t*%s = \\%s%s::%s;\n", ( $alias, $type, $package, $original );
+}
 
 =head1 NAME
 
@@ -109,13 +134,14 @@ and establishs IS-A relationship with current package and alias at compile time
 
 =head1 METHODS
 
-=head2 alias($alias, $original, @import)
+=head2 alias($alias, $original, ...)
 
 use package makes as alias of the original
 and imports the symbols in import in the namespace of alias
 
 	package::alias($alias, $original, qw'$var $foo basename');
-	package::alias($alias, $original, {'@as => '@it', '@like => '@it'}, qw'sub routine');
+	
+	package::alias($alias, $original, [{'@as' => '@it', '@like' => '@it'}, qw'sub function'], 'routine', ['ggg'];
 
 =head1 AUTHOR
 

@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-#package 02_package
+#package 01_package
 use Test::More tests => 11;
 use strict;
 
@@ -13,7 +13,7 @@ BEGIN {
 sub mysub { 1 };
 sub as { 0 };
 
-use package "alias", qw'mysub as';
+use package "alias", qw'mysub as &scalar';
 ok &alias::mysub;
 ok ! &alias::as;
 
