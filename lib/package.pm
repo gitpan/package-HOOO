@@ -2,19 +2,29 @@ package package;
 use strict;
 use warnings;
 
-our $VERSION = '0.0035';
+our $VERSION = '0.0037';
 
 use Carp 'croak';
 #printf "*** %s VERSION: %s\n", __PACKAGE__, $VERSION;
 
 #	*VERSION = \$%s::VERSION if defined $%s::VERSION;
 
+#'Original'->package::import('Alias', {'make' => 'new'} );
+
 sub import {
-	shift;
+	my $to = shift;
+
 	return unless @_;
-	my $alias    = shift;
+
+	my $alias = shift;
 	my $original = caller;
-	package::alias( $alias, $original, @_ );
+
+	if ( $to eq __PACKAGE__ ) {
+		my $original = caller;
+		package::alias( $alias, $original, @_ );
+	} else {
+		package::_import( $to, $alias, @_ );
+	}
 }
 
 our $_space = qr/\s+/so;
@@ -30,11 +40,14 @@ sub alias {
 
 	if ($@) {
 		#printf "%s\n", $expression;
-		#carp $@;
+		#croak $@;
 		croak "Syntax error";
 	}
 
+	return 1;
 }
+
+*base = \&alias;
 
 sub expression {
 	my $alias    = shift;
@@ -53,6 +66,24 @@ sub expression {
 	}
 
 	return $expression;
+}
+
+sub _import {
+	my $alias    = shift;
+	my $original = shift;
+
+	my $expression;
+
+	$expression .= "package $alias;\n";
+
+	if (@_) {
+		$expression .= "use strict;\n";
+		$expression .= "use warnings;\n";
+
+		$expression .= package::statements( $alias, $original, @_ );
+	}
+
+	return eval $expression;
 }
 
 sub statements {
@@ -100,6 +131,8 @@ sub statements {
 
 sub atpo {
 	my ( $alias, $type, $package, $original ) = @_;
+	#croak  sprintf "\t*%s = \\%s;\n", ( $alias, $original ) if $original =~ /::/so;
+	return sprintf "\t*%s = \\%s;\n", ( $alias, $original ) if $original =~ /::/so;
 	return sprintf "\t*%s = \\%s%s::%s;\n", ( $alias, $type, $package, $original );
 }
 
@@ -109,11 +142,13 @@ package - makes an alias of the current package
 
 =head1 SYNOPSIS
 
+	
 	package ThisPAckage;
 	
 	sub new { }
 	
 	use package "Alias", qw'new', { alias => 'new' };
+	ThisPAckage->package::import("Time::HiRes", 'time'};
 	
 	my $ref = &Alias::new;
 	my $obj = Alias->alias;
@@ -122,7 +157,7 @@ package - makes an alias of the current package
 	
 	package main;
 	
-	package::alias('Alias', 'Original');
+	Alias->package::base('Original');
 	
 	my $alias = new Alias();
 	$alias->sub_from_original;
@@ -134,14 +169,21 @@ and establishs IS-A relationship with current package and alias at compile time
 
 =head1 METHODS
 
-=head2 alias($alias, $original, ...)
+=head2 base($alias, $original, ...)
 
 use package makes as alias of the original
 and imports the symbols in import in the namespace of alias
 
-	package::alias($alias, $original, qw'$var $foo basename');
+	package::base($alias, $original, qw'$var $foo basename');
 	
-	package::alias($alias, $original, [{'@as' => '@it', '@like' => '@it'}, qw'sub function'], 'routine', ['ggg'];
+	package::base($alias, $original, [{'@as' => '@it', '@like' => '@it'}, qw'sub function'], 'routine', ['ggg'];
+
+
+=head2 import($to, $from, ...)
+
+imports the symbols from $from to $to
+
+	Foo->package::import('from', {'foo' => 'new'} );
 
 =head1 AUTHOR
 

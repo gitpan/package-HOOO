@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:                package
-version:             0.0035
+version:             0.0037
 abstract:            ~
 license:             ~
 generated_by:        ExtUtils::MakeMaker version 6.32

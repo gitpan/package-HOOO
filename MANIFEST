@@ -7,4 +7,5 @@ t/02_package.t
 t/03_package.t
 t/04_package.t
 t/05_package.t
+t/06_package.t
 META.yml                                 Module meta-data (added by MakeMaker)
